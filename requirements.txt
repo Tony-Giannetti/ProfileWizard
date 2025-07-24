@@ -1,0 +1,13 @@
+# ─── Core UI & geometry ──────────────────────────────────────────
+PyQt5>=5.15.10,<6.0          # Qt widgets and OpenGL context
+ezdxf>=1.3.0,<2.0            # DXF parsing / QtViewer backend
+numpy>=1.26,<2.0             # math backend used by ezdxf & simulator
+PyOpenGL>=3.1,<4.0           # OpenGL bindings for QtViewer
+PyOpenGL_accelerate>=3.1,<4.0  # (optional) C‑speedups for PyOpenGL
+
+# ─── Simulator / plotting ─────────────────────────────────────────
+matplotlib>=3.9,<4.0         # axis labels, icon export, etc.
+pyqtgraph>=0.13,<0.14        # fast 2‑D/3‑D G‑code preview
+
+# ─── Optional geometry helpers ───────────────────────────────────
+shapely>=2.0,<3.0            # offset / boolean ops (safe to remove if unused)

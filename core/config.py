@@ -14,7 +14,8 @@ _defaults = {
         "table_length": 3500.0,
         "table_width": 2000.0,
         "max_feed_rate": 5000.0,
-        "rapid_rate":      10000.0
+        "rapid_rate":      10000.0,
+        "controller":      "Osai"
     },
     "tool_settings": {
         "Blade Diameter": 400,

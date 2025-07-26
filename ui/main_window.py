@@ -275,23 +275,41 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(f"Loaded {Path(fn).name}", 4000)
 
 
+    # ---------------------------------------------------------------- path helper
+    def _generate_path(self, build_func, label: str, *, row: int | None = None):
+        """Build and register a :class:`probe.Path` using *build_func*."""
+
+        path = build_func(self.dxfWrapper, config)
+        if not path.points:
+            QMessageBox.warning(self, "Sampler", "No points found.")
+            return None
+
+        if label == "smoothing" and len(path.points) < 2:
+            QMessageBox.information(self, "Smoothing", "Not enough points for smoothing.")
+            return None
+
+        if row is None:
+            self.proc_mgr.add(path)
+            idx = self.proc_mgr.count_by_label(label)
+            self.process_list.add_process_item(f"{label.capitalize()} {idx}", path)
+        else:
+            self.proc_mgr.update(row, path)
+            item = self.process_list.item(row)
+            if item:
+                item.setData(Qt.UserRole, path)
+
+        self.view.display_path(path.points)
+        self.statusBar().showMessage(f"{label.capitalize()} path generated", 3000)
+        return path
+
+
     # ================================================================= Roughing
     def generate_roughing(self):
         if not getattr(self, "dxfWrapper", None) or self.view.doc is None:
-            QMessageBox.warning(self, "No DXF", "Load a DXF first."); return
-
-        path = planner.build_roughing_path(self.dxfWrapper, config)
-        if not path.points:
-            QMessageBox.warning(self, "Sampler", "No points found.")
+            QMessageBox.warning(self, "No DXF", "Load a DXF first.")
             return
 
-        self.proc_mgr.add(path)
-
-        idx   = self.proc_mgr.count_by_label("roughing")
-        self.process_list.add_process_item(f"Roughing {idx}", path)
-
-        self.view.display_path(path.points)
-        self.statusBar().showMessage("Roughing path generated", 3000)
+        self._generate_path(planner.build_roughing_path, "roughing")
 
     # ================================================================= Smoothing
     def generate_smoothing(self) -> None:
@@ -299,22 +317,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No DXF", "Load a DXF first.")
             return
 
-        path = planner.build_smoothing_path(self.dxfWrapper, config)
-        if not path.points:
-            QMessageBox.warning(self, "Sampler", "No points found.")
-            return
-
-        if len(path.points) < 2:
-            QMessageBox.information(self, "Smoothing", "Not enough points for smoothing.")
-            return
-
-        self.proc_mgr.add(path)
-
-        idx   = self.proc_mgr.count_by_label("smoothing")
-        self.process_list.add_process_item(f"Smoothing {idx}", path)
-
-        self.view.display_path(path.points)      # same cyan polyline you had
-        self.statusBar().showMessage("Smoothing path generated", 3000)
+        self._generate_path(planner.build_smoothing_path, "smoothing")
 
 
     def _regen_current_process(self):
@@ -324,16 +327,10 @@ class MainWindow(QMainWindow):
         row   = self.process_list.currentRow()
         label = item.text().lower()
 
-        new_path = None
         if label.startswith("roughing"):
-            new_path = planner.build_roughing_path(self.dxfWrapper, config)
+            self._generate_path(planner.build_roughing_path, "roughing", row=row)
         elif label.startswith("smoothing"):
-            new_path = planner.build_smoothing_path(self.dxfWrapper, config)
-
-        if new_path:
-            self.proc_mgr.update(row, new_path)
-            item.setData(Qt.UserRole, new_path)
-            self.view.display_path(new_path.points)
+            self._generate_path(planner.build_smoothing_path, "smoothing", row=row)
 
 
     # ---------------------------------------------------------------- click handler

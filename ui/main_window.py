@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
 )
 
 from core import probe
+from core import planner
 from core.config import config, save_config
 from ui.dialogs import MachineSettingsDialog, ToolSettingsDialog, ToolpathSettingsDialog
 from ui.canvas import Canvas
@@ -21,13 +22,7 @@ from ui.process_list_widget import ProcessListWidget
 from dxf.dxf import Dxf
 from core.post_processors.osai_post import OsaiPost
 from core.post_processors.breton_post import BretonPost
-from simulator.viewer import GCodeSimDock  
-
-# --------------------------------------------------------------------- helpers
-def _colinear(p0, p1, p2, *, tol=1e-3) -> bool:
-    (x0, y0), (x1, y1), (x2, y2) = p0, p1, p2
-    area = abs((x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0))
-    return area <= tol
+from simulator.viewer import GCodeSimDock
 
 # ===================================================================== MainWindow
 class MainWindow(QMainWindow):
@@ -285,22 +280,11 @@ class MainWindow(QMainWindow):
         if not getattr(self, "dxfWrapper", None) or self.view.doc is None:
             QMessageBox.warning(self, "No DXF", "Load a DXF first."); return
 
-        blade_w = config["tool_settings"]["blade_width"]
-        x_step  = config["toolpath_settings"]["roughing_stepover"]
-        xmin, _, xmax, _ = self.dxfWrapper.extents
+        path = planner.build_roughing_path(self.dxfWrapper, config)
+        if not path.points:
+            QMessageBox.warning(self, "Sampler", "No points found.")
+            return
 
-        pts = probe.sample_outline(
-            self.dxfWrapper.msp,
-            xmin=xmin - blade_w, xmax=xmax + blade_w,
-            blade_width=blade_w,
-            x_step=x_step,
-        )
-        if not pts: QMessageBox.warning(self, "Sampler", "No points found."); return
-
-        stock = config["toolpath_settings"].get("stock_allowance", 0.0)
-        if stock: pts = [(x, y + stock) for x, y in pts]
-
-        path  = probe.Path(points=pts, label="roughing")
         self.proc_mgr.add(path)
 
         idx   = self.proc_mgr.count_by_label("roughing")
@@ -315,43 +299,15 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No DXF", "Load a DXF first.")
             return
 
-        # --- parameters --------------------------------------------------
-        blade_w = config["tool_settings"]["blade_width"]
-        x_step  = config["toolpath_settings"]["smoothing_resolution"]
-        stock   = config["toolpath_settings"].get("smoothing_stock", 0.0)
-
-        xmin, _, xmax, _ = self.dxfWrapper.extents
-        start_x = xmin - blade_w                 # right edge flush with min‑X
-
-        pts = probe.sample_outline(
-            self.dxfWrapper.msp,
-            xmin=start_x,
-            xmax=xmax,
-            blade_width=blade_w,
-            x_step=x_step,
-        )
-        if not pts:
+        path = planner.build_smoothing_path(self.dxfWrapper, config)
+        if not path.points:
             QMessageBox.warning(self, "Sampler", "No points found.")
             return
 
-        if stock:
-            pts = [(x, y + stock) for x, y in pts]
-
-        # --- colinear purge (keeps outline tidy) -------------------------
-        if len(pts) >= 3:
-            keep = [pts[0]]
-            for i in range(1, len(pts) - 1):
-                if not _colinear(keep[-1], pts[i], pts[i + 1], tol=0.001):
-                    keep.append(pts[i])
-            keep.append(pts[-1])
-            pts = keep
-
-        if len(pts) < 2:
+        if len(path.points) < 2:
             QMessageBox.information(self, "Smoothing", "Not enough points for smoothing.")
             return
 
-        # --- store + list + display -------------------------------------
-        path = probe.Path(points=pts, label="smoothing")
         self.proc_mgr.add(path)
 
         idx   = self.proc_mgr.count_by_label("smoothing")
@@ -360,40 +316,6 @@ class MainWindow(QMainWindow):
         self.view.display_path(path.points)      # same cyan polyline you had
         self.statusBar().showMessage("Smoothing path generated", 3000)
 
-    def _build_roughing_path(self):
-        blade_w = config["tool_settings"]["blade_width"]
-        x_step  = config["toolpath_settings"]["roughing_stepover"]
-        stock   = config["toolpath_settings"]["stock_allowance"]
-        xmin, _, xmax, _ = self.dxfWrapper.extents
-        pts = probe.sample_outline(
-            self.dxfWrapper.msp,
-            xmin=xmin - blade_w, xmax=xmax + blade_w,
-            blade_width=blade_w, x_step=x_step,
-        )
-        if stock:
-            pts = [(x, y + stock) for x, y in pts]
-        return probe.Path(points=pts, label="roughing")
-
-    def _build_smoothing_path(self):
-        blade_w = config["tool_settings"]["blade_width"]
-        x_step  = config["toolpath_settings"]["smoothing_resolution"]
-        # stock   = config["toolpath_settings"]["smoothing_stock"]
-        xmin, _, xmax, _ = self.dxfWrapper.extents
-        start_x = xmin - blade_w
-        pts = probe.sample_outline(
-            self.dxfWrapper.msp,
-            xmin=start_x, xmax=xmax,
-            blade_width=blade_w, x_step=x_step,
-        )
-        # if stock:
-        #     pts = [(x, y + stock) for x, y in pts]
-        if len(pts) >= 3:
-            keep = [pts[0]]
-            for i in range(1, len(pts) - 1):
-                if not _colinear(keep[-1], pts[i], pts[i+1]): keep.append(pts[i])
-            keep.append(pts[-1])
-            pts = keep
-        return probe.Path(points=pts, label="smoothing")
 
     def _regen_current_process(self):
         item = self.process_list.currentItem()
@@ -404,9 +326,9 @@ class MainWindow(QMainWindow):
 
         new_path = None
         if label.startswith("roughing"):
-            new_path = self._build_roughing_path()
+            new_path = planner.build_roughing_path(self.dxfWrapper, config)
         elif label.startswith("smoothing"):
-            new_path = self._build_smoothing_path()
+            new_path = planner.build_smoothing_path(self.dxfWrapper, config)
 
         if new_path:
             self.proc_mgr._passes[row] = new_path

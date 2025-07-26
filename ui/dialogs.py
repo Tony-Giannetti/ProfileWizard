@@ -1,7 +1,7 @@
 # dialogs.py
 from PyQt5.QtWidgets import (
     QDialog, QFormLayout, QDoubleSpinBox, QSpinBox,
-    QDialogButtonBox
+    QDialogButtonBox, QComboBox
 )
 from core.config import config
 
@@ -31,6 +31,14 @@ class MachineSettingsDialog(QDialog):
         self.rapid.setValue(config["machine_settings"]["rapid_rate"])
         form.addRow("Rapid Rate (mm/min):", self.rapid)
 
+        self.controller = QComboBox()
+        self.controller.addItems(["Osai", "Breton"])
+        current = config["machine_settings"].get("controller", "Osai")
+        idx = self.controller.findText(current)
+        if idx >= 0:
+            self.controller.setCurrentIndex(idx)
+        form.addRow("Controller:", self.controller)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accepted)
         buttons.rejected.connect(self.reject)
@@ -39,6 +47,7 @@ class MachineSettingsDialog(QDialog):
     def accepted(self):
         config["machine_settings"]["max_feed_rate"] = self.max_feed.value()
         config["machine_settings"]["rapid_rate"]      = self.rapid.value()
+        config["machine_settings"]["controller"]     = self.controller.currentText()
         self.accept()
 
 

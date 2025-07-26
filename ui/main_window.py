@@ -20,6 +20,7 @@ from ui.process_manager import ProcessManager, DxfInfo
 from ui.process_list_widget import ProcessListWidget
 from dxf.dxf import Dxf
 from core.post_processors.osai_post import OsaiPost
+from core.post_processors.breton_post import BretonPost
 from simulator.viewer import GCodeSimDock  
 
 # --------------------------------------------------------------------- helpers
@@ -421,11 +422,15 @@ class MainWindow(QMainWindow):
 
     def export_gcode(self, checked: bool = False):
         # 1) choose save location
+        mach       = config["machine_settings"]
+        controller = mach.get("controller", "Osai")
+        ext        = ".nc" if controller == "Breton" else ".s10"
+
         fn, _ = QFileDialog.getSaveFileName(
             self,
             "Save G‑code",
-            "gcode.s10",
-            "G‑code (*.s10);;All Files (*)",
+            f"gcode{ext}",
+            f"G‑code (*{ext});;All Files (*)",
         )
         if not fn:
             return  # user cancelled
@@ -454,10 +459,10 @@ class MainWindow(QMainWindow):
         # 4) build & save
         tool  = config["tool_settings"]
         tp    = config["toolpath_settings"]
-        mach  = config["machine_settings"]
-        ori = (config["machine_settings"]["table_orientation"] == "side")
+        ori   = (mach["table_orientation"] == "side")
 
-        post = OsaiPost(
+        PostClass = BretonPost if controller == "Breton" else OsaiPost
+        post = PostClass(
             rough_pts,
             smoothing_pts=smooth_pts,
             blade_width   = tool["blade_width"],

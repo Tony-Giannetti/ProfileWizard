@@ -331,7 +331,7 @@ class MainWindow(QMainWindow):
             new_path = planner.build_smoothing_path(self.dxfWrapper, config)
 
         if new_path:
-            self.proc_mgr._passes[row] = new_path
+            self.proc_mgr.update(row, new_path)
             item.setData(Qt.UserRole, new_path)
             self.view.display_path(new_path.points)
 

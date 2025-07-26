@@ -18,8 +18,8 @@ _defaults = {
         "controller":      "Osai"
     },
     "tool_settings": {
-        "Blade Diameter": 400,
-        "Blade Width":   3.5
+        "blade_diameter": 400,
+        "blade_width":   3.5
     },
     "toolpath_settings": {
         "start": 1000.0,

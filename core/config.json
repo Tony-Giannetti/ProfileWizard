@@ -28,7 +28,8 @@
         "roughing_stepover": 4.0,
         "smoothing_resolution": 0.5,
         "smoothing_step": 5.0,
-        "feed_rate": 1000.0,
+        "roughing_feedrate": 1000.0,
+        "smoothing_feedrate": 800.0,
         "stock_allowance": 1.0
     }
 }

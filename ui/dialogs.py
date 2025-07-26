@@ -111,10 +111,19 @@ class ToolpathSettingsDialog(QDialog):
         self.smoothStep.setValue(config["toolpath_settings"]["smoothing_step"])
         form.addRow("Smoothing Step (mm):", self.smoothStep)
 
-        self.feed = QDoubleSpinBox()
-        self.feed.setRange(0, 1e6)
-        self.feed.setValue(config["toolpath_settings"]["feed_rate"])
-        form.addRow("Feed Rate (mm/min):", self.feed)
+        self.r_feed = QDoubleSpinBox()
+        self.r_feed.setRange(0, 1e6)
+        self.r_feed.setValue(
+            config["toolpath_settings"].get("roughing_feedrate", 1000.0)
+        )
+        form.addRow("Roughing Feed Rate (mm/min):", self.r_feed)
+
+        self.s_feed = QDoubleSpinBox()
+        self.s_feed.setRange(0, 1e6)
+        self.s_feed.setValue(
+            config["toolpath_settings"].get("smoothing_feedrate", 800.0)
+        )
+        form.addRow("Smoothing Feed Rate (mm/min):", self.s_feed)
 
         self.stock = QDoubleSpinBox()
         self.stock.setRange(0, 100.0)
@@ -129,6 +138,7 @@ class ToolpathSettingsDialog(QDialog):
     def accepted(self):
         config["toolpath_settings"]["roughing_stepover"]   = self.rough.value()
         config["toolpath_settings"]["smoothing_resolution"] = self.smooth.value()
-        config["toolpath_settings"]["feed_rate"]          = self.feed.value()
+        config["toolpath_settings"]["roughing_feedrate"]  = self.r_feed.value()
+        config["toolpath_settings"]["smoothing_feedrate"] = self.s_feed.value()
         config["toolpath_settings"]["stock_allowance"]   = self.stock.value()
         self.accept()

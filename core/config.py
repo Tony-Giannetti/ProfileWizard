@@ -26,7 +26,8 @@ _defaults = {
         "end": 500.0,
         "roughing_stepover": 0.5,
         "smoothing_resolution": 0.2,
-        "feed_rate":          1000.0
+        "roughing_feedrate":  1000.0,
+        "smoothing_feedrate": 800.0
     }
 }
 

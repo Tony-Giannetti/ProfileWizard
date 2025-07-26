@@ -458,12 +458,7 @@ class MainWindow(QMainWindow):
             return
 
         # ---- translate entities ---------------------------------------
-        for e in self.dxfWrapper.msp:
-            try:
-                e.translate(dx, 0, 0)
-            except AttributeError:
-                if hasattr(e.dxf, "start"):
-                    e.dxf.start.x += dx; e.dxf.end.x += dx
+        self.dxfWrapper.translate_x(dx)
 
         self._dxf_info.xmin = new_val
 

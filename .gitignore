@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / library files
+__pycache__/
+*.py[cod]
+
+# CNC outputs and simulation data
+*.nc
+*.s10
+*.gcode
+*.STL
+*.SLDPRT
+
+# Misc
+.DS_Store
+Thumbs.db

@@ -25,3 +25,13 @@ class Dxf:
         """(xmin, ymin, xmax, ymax) in model‑space units."""
         mn, mx = _bbox_extents(self.msp)
         return mn.x, mn.y, mx.x, mx.y
+
+    def translate_x(self, dx: float) -> None:
+        """Translate all entities in model space along the X axis."""
+        for e in self.msp:
+            try:
+                e.translate(dx, 0, 0)
+            except AttributeError:
+                if hasattr(e.dxf, "start"):
+                    e.dxf.start.x += dx
+                    e.dxf.end.x += dx

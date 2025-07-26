@@ -21,6 +21,10 @@ class ProcessManager:
         """Insert *obj* at *index* (used for the pinned DXF row)."""
         self._passes.insert(index, obj)
 
+    def update(self, index: int, obj) -> None:
+        """Replace the object at ``index`` with ``obj``."""
+        self._passes[index] = obj
+
     def __getitem__(self, idx: int):
         return self._passes[idx]
 

@@ -64,4 +64,5 @@ class ProcessListWidget(QListWidget):
 
     # ---------- helpers -----------------------------------------------
     def _sync(self):
-        self.proc_mgr._passes = [self.item(i).data(Qt.UserRole) for i in range(self.count())]
+        for i in range(self.count()):
+            self.proc_mgr.update(i, self.item(i).data(Qt.UserRole))

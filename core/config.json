@@ -16,7 +16,7 @@
         "table_width": 2000.0,
         "max_feed_rate": 5000.0,
         "rapid_rate": 10000.0,
-        "controller": "Osai"
+        "controller": "Breton"
     },
     "tool_settings": {
         "blade_diameter": 408.0,

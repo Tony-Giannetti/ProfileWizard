@@ -1,16 +1,5 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Sequence
-
-from .osai_post import OsaiPost
-
-
-class BretonPost(OsaiPost):
-    """Simple Breton controller post based on :class:`OsaiPost`."""
-
-    def save(self, path: str | Path) -> Path:
-        """Write Breton G-code to *path* (.nc) and return the absolute Path."""
-=======
 from typing import Sequence, Tuple, List
 
 

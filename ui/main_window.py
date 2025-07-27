@@ -264,7 +264,7 @@ class MainWindow(QMainWindow):
 
         # if a previous DXF row exists, replace it
         if self.process_list.count() and isinstance(self.proc_mgr.passes[0], DxfInfo):
-            self.proc_mgr.passes[0] = info
+            self.proc_mgr.update(0, info)
             it = self.process_list.item(0); it.setData(Qt.UserRole, info)
         else:
             self.proc_mgr.insert(0, info)

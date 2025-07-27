@@ -57,7 +57,7 @@ class ProcessListWidget(QListWidget):
             if 0 in rows: rows.remove(0)     # don't delete DXF row
             for r in rows:
                 self.takeItem(r)
-                self.proc_mgr.passes.pop(r)
+                self.proc_mgr.remove(r)
             self.clearSelection()
         else:
             super().keyPressEvent(ev)

@@ -13,15 +13,13 @@ from PyQt5.QtWidgets import (
 )
 
 from core import probe
-from core import planner
+from core import operations
 from core.config import config, save_config
 from ui.dialogs import MachineSettingsDialog, ToolSettingsDialog, ToolpathSettingsDialog
 from ui.canvas import Canvas
 from ui.process_manager import ProcessManager, DxfInfo
 from ui.process_list_widget import ProcessListWidget
 from dxf.dxf import Dxf
-from core.post_processors.osai_post import OsaiPost
-from core.post_processors.breton_post import BretonPost
 from simulator.viewer import GCodeSimDock
 
 # ===================================================================== MainWindow
@@ -276,16 +274,13 @@ class MainWindow(QMainWindow):
 
 
     # ---------------------------------------------------------------- path helper
-    def _generate_path(self, build_func, label: str, *, row: int | None = None):
-        """Build and register a :class:`probe.Path` using *build_func*."""
+    def _generate_path(self, label: str, *, row: int | None = None):
+        """Build and register a :class:`probe.Path` of type *label*."""
 
-        path = build_func(self.dxfWrapper, config)
-        if not path.points:
-            QMessageBox.warning(self, "Sampler", "No points found.")
-            return None
-
-        if label == "smoothing" and len(path.points) < 2:
-            QMessageBox.information(self, "Smoothing", "Not enough points for smoothing.")
+        try:
+            path = operations.generate_path(self.dxfWrapper, config, label)
+        except ValueError as e:
+            QMessageBox.warning(self, label.capitalize(), str(e))
             return None
 
         if row is None:
@@ -309,7 +304,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No DXF", "Load a DXF first.")
             return
 
-        self._generate_path(planner.build_roughing_path, "roughing")
+        self._generate_path("roughing")
 
     # ================================================================= Smoothing
     def generate_smoothing(self) -> None:
@@ -317,7 +312,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No DXF", "Load a DXF first.")
             return
 
-        self._generate_path(planner.build_smoothing_path, "smoothing")
+        self._generate_path("smoothing")
 
 
     def _regen_current_process(self):
@@ -328,9 +323,9 @@ class MainWindow(QMainWindow):
         label = item.text().lower()
 
         if label.startswith("roughing"):
-            self._generate_path(planner.build_roughing_path, "roughing", row=row)
+            self._generate_path("roughing", row=row)
         elif label.startswith("smoothing"):
-            self._generate_path(planner.build_smoothing_path, "smoothing", row=row)
+            self._generate_path("smoothing", row=row)
 
 
     # ---------------------------------------------------------------- click handler
@@ -362,42 +357,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No processes", "Generate some paths first.")
             return
 
-        # 3) gather paths in current list order
-        rough_pts, smooth_pts = [], None
-        for p in self.proc_mgr.passes:
-            if isinstance(p, probe.Path):
-                if p.label == "roughing":
-                    rough_pts.extend(p.points)
-                elif p.label == "smoothing" and smooth_pts is None:
-                    smooth_pts = list(p.points)
-
-        if not rough_pts:
-            QMessageBox.warning(self, "No roughing", "Need at least one roughing path.")
+        # 3) build & save using utility function
+        try:
+            out_path = operations.export_gcode(self.proc_mgr.passes, config, fn)
+        except ValueError as e:
+            QMessageBox.warning(self, "Export G-code", str(e))
             return
 
-        # 4) build & save
-        tool  = config["tool_settings"]
-        tp    = config["toolpath_settings"]
-        ori   = (mach["table_orientation"] == "side")
-
-        PostClass = BretonPost if controller == "Breton" else OsaiPost
-        post = PostClass(
-            rough_pts,
-            smoothing_pts=smooth_pts,
-            blade_width   = tool["blade_width"],
-            blade_diameter= tool["blade_diameter"],
-            y_start       = tp.get("start", 1000.0),
-            y_end         = tp.get("end",   500.0),
-            y_step        = tp.get("smoothing_step", tool["blade_width"]),
-            z_clear       = mach.get("z_clearance", 50.0),
-            z_max         = mach.get("z_max",       100.0),
-            plunge_feed   = tp.get("plunge_feed",        500.0),
-            cut_feed      = tp.get("roughing_feedrate", 2000.0),
-            cut_feed_xy   = tp.get("smoothing_feedrate", 800.0),
-            invert_xy     = ori,
-        )
-
-        out_path = post.save(fn)
         self.statusBar().showMessage(f"G‑code saved → {out_path.name}", 4000)
 
     def simulate(self):

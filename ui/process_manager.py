@@ -25,6 +25,10 @@ class ProcessManager:
         """Replace the object at ``index`` with ``obj``."""
         self._passes[index] = obj
 
+    def remove(self, index: int) -> None:
+        """Remove the object at ``index``."""
+        self._passes.pop(index)
+
     def __getitem__(self, idx: int):
         return self._passes[idx]
 
